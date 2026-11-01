@@ -1,0 +1,6 @@
+# Ignore all uploaded files except .gitkeep
+*
+!.gitignore
+!avatars/
+avatars/*
+!avatars/.gitkeep

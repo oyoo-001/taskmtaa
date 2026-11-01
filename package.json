@@ -1,0 +1,50 @@
+{
+  "name": "taskmtaa",
+  "version": "1.0.0",
+  "description": "Hyperlocal micro-task marketplace connecting task posters with nearby taskers",
+  "type": "module",
+  "scripts": {
+    "verify": "node verify.js",
+    "dev": "node server/index.js",
+    "dev:client": "cd client && npm run dev -- --host",
+    "build": "cd client && npm run build",
+    "start": "node server/index.js",
+    "migrate": "node server/database/migrate.js",
+    "seed": "node server/database/seed.js",
+    "create-admin": "node server/scripts/createAdmin.js",
+    "test-cloudinary": "node server/scripts/test-cloudinary.js"
+  },
+  "keywords": [
+    "marketplace",
+    "tasks",
+    "geospatial",
+    "real-time"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "africastalking": "^0.8.4",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.11.0",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.5.0",
+    "node-cache": "^5.1.2",
+    "nodemailer": "^10.3.1",
+    "pg": "^8.11.3",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.6.1",
+    "speakeasy": "^2.0.0",
+    "web-push": "^3.6.7",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
+  }
+}
