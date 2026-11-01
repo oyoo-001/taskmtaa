@@ -153,8 +153,21 @@ app.use('/api/v1/gigs', gigRoutes);
 app.use('/api/v1/gig-orders', gigOrderRoutes);
 app.use('/api/v1/uploads', uploadRoutes);
 
-// 404 handler
-app.use(notFoundHandler);
+// Serve static files from React build in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+  
+  // Handle React routing - return index.html for all non-API routes
+  // This must be AFTER all API routes but BEFORE error handlers
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  });
+}
+
+// 404 handler (only for API routes in production, since * catches everything else)
+if (process.env.NODE_ENV !== 'production') {
+  app.use(notFoundHandler);
+}
 
 // Global error handler (must be last)
 app.use(errorHandler);
