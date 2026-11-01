@@ -61,8 +61,26 @@ const io = new Server(httpServer, {
 // Make io accessible to routes
 app.set('io', io);
 
-// Security middleware
-app.use(helmet());
+// Security middleware - Configure Helmet with relaxed CSP for production
+if (process.env.NODE_ENV === 'production') {
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for Vite build
+        styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles
+        imgSrc: ["'self'", "data:", "https:", "blob:"], // Allow images from CDNs
+        connectSrc: ["'self'", "ws:", "wss:"], // Allow WebSocket for Socket.io
+        fontSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    },
+  }));
+} else {
+  app.use(helmet());
+}
 
 // CORS configuration
 app.use(cors({
