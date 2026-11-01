@@ -8,16 +8,18 @@ Your app is deployed at: https://taskmtaa.onrender.com
 
 ## Build Configuration
 
-### Build Command
+### Build Command (Updated!)
 ```bash
-npm install; npm run build
+npm run build
 ```
 
 This will:
-1. Install root dependencies
-2. Navigate to client folder
-3. Install client dependencies
-4. Build the React app with Vite
+1. Install root dependencies (`npm install`)
+2. Navigate to client folder (`cd client`)
+3. Install client dependencies (`npm install`)
+4. Build the React app (`npm run build`)
+
+**Important**: Use `npm run build` in Render, not `npm install; npm run build`
 
 ### Start Command
 ```bash

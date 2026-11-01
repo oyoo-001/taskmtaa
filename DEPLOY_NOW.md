@@ -28,7 +28,7 @@ Serves built React app in production
 ### Step 1: Commit & Push
 ```bash
 git add .
-git commit -m "Fix Render deployment: install client deps and serve static files"
+git commit -m "Fix Render deployment: proper client dependency installation"
 git push origin main
 ```
 
@@ -36,7 +36,7 @@ git push origin main
 
 **Build Command:**
 ```
-npm install; npm run build
+npm run build
 ```
 
 **Start Command:**
