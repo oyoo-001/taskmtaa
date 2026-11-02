@@ -12,6 +12,8 @@ import {
   StarIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
+import ConfirmModal from '../../components/ConfirmModal';
+import AlertModal from '../../components/AlertModal';
 
 export default function BidsTracking() {
   const [bids, setBids] = useState([]);
@@ -23,6 +25,10 @@ export default function BidsTracking() {
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, bidId: null });
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   useEffect(() => {
     fetchBids();
@@ -69,23 +75,67 @@ export default function BidsTracking() {
   };
 
   const handleAcceptBid = async (bidId, taskId) => {
-    try {
-      await api.patch(`/bids/${bidId}/accept`);
-      // Refresh bids
-      fetchBids();
-    } catch (error) {
-      console.error('Error accepting bid:', error);
-      alert('Failed to accept bid');
-    }
+    setConfirmModal({
+      isOpen: true,
+      action: 'accept',
+      bidId,
+      taskId,
+      title: 'Accept Bid',
+      message: 'Are you sure you want to accept this bid? Other pending bids will be automatically rejected.',
+      type: 'success'
+    });
   };
 
   const handleRejectBid = async (bidId) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'reject',
+      bidId,
+      title: 'Reject Bid',
+      message: 'Are you sure you want to reject this bid? This action cannot be undone.',
+      type: 'danger'
+    });
+  };
+
+  const executeAction = async () => {
+    const { action, bidId, taskId } = confirmModal;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+
     try {
-      await api.patch(`/bids/${bidId}/reject`);
+      if (action === 'accept') {
+        await api.patch(`/bids/${bidId}/accept`);
+        setAlertModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Bid Accepted',
+          message: 'The bid has been accepted successfully!'
+        });
+      } else if (action === 'reject') {
+        await api.patch(`/bids/${bidId}/reject`);
+        setAlertModal({
+          isOpen: true,
+          type: 'info',
+          title: 'Bid Rejected',
+          message: 'The bid has been rejected.'
+        });
+      } else if (action === 'complete') {
+        await api.patch(`/bids/${bidId}/complete`);
+        setAlertModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Bid Completed',
+          message: 'Bid marked as completed! You can now rate the tasker.'
+        });
+      }
       fetchBids();
     } catch (error) {
-      console.error('Error rejecting bid:', error);
-      alert('Failed to reject bid');
+      console.error(`Error ${action}ing bid:`, error);
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Action Failed',
+        message: error.response?.data?.error?.message || `Failed to ${action} bid. Please try again.`
+      });
     }
   };
 
@@ -103,18 +153,14 @@ export default function BidsTracking() {
   };
 
   const handleCompleteBid = async (bidId) => {
-    if (!confirm('Are you sure you want to mark this bid as completed? This will allow you to rate the tasker.')) {
-      return;
-    }
-
-    try {
-      await api.patch(`/bids/${bidId}/complete`);
-      fetchBids();
-      alert('Bid marked as completed! Please rate the tasker.');
-    } catch (error) {
-      console.error('Error completing bid:', error);
-      alert(error.response?.data?.error?.message || 'Failed to complete bid');
-    }
+    setConfirmModal({
+      isOpen: true,
+      action: 'complete',
+      bidId,
+      title: 'Mark as Completed',
+      message: 'Are you sure the tasker has completed the work? This will allow you to rate them.',
+      type: 'info'
+    });
   };
 
   const openRatingModal = (bid) => {
@@ -126,7 +172,12 @@ export default function BidsTracking() {
 
   const handleSubmitRating = async () => {
     if (rating === 0) {
-      alert('Please select a rating');
+      setAlertModal({
+        isOpen: true,
+        type: 'warning',
+        title: 'Rating Required',
+        message: 'Please select a rating between 1 and 5 stars before submitting.'
+      });
       return;
     }
 
@@ -138,10 +189,20 @@ export default function BidsTracking() {
       });
       setShowRatingModal(false);
       fetchBids();
-      alert('Rating submitted successfully!');
+      setAlertModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Rating Submitted',
+        message: 'Thank you for rating the tasker! Your feedback helps build a better community.'
+      });
     } catch (error) {
       console.error('Error submitting rating:', error);
-      alert(error.response?.data?.error?.message || 'Failed to submit rating');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Submission Failed',
+        message: error.response?.data?.error?.message || 'Failed to submit rating. Please try again.'
+      });
     } finally {
       setSubmitting(false);
     }
@@ -392,6 +453,27 @@ export default function BidsTracking() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={executeAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Confirm"
+        cancelText="Cancel"
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

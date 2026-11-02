@@ -12,11 +12,17 @@ import {
   PencilIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
+import ConfirmModal from '../../components/ConfirmModal';
+import AlertModal from '../../components/AlertModal';
 
 export default function MyPosts() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+  const [alertModal, setAlertModal] = useState({ isOpen: false });
 
   useEffect(() => {
     fetchMyTasks();
@@ -39,23 +45,54 @@ export default function MyPosts() {
       const newStatus = currentStatus === 'open' ? 'hidden' : 'open';
       await api.patch(`/tasks/${taskId}/status`, { status: newStatus });
       fetchMyTasks();
+      setAlertModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Task Updated',
+        message: `Task is now ${newStatus === 'open' ? 'visible' : 'hidden'} to taskers.`
+      });
     } catch (error) {
       console.error('Error toggling visibility:', error);
-      alert('Failed to update task visibility');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Update Failed',
+        message: 'Failed to update task visibility. Please try again.'
+      });
     }
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
-      return;
-    }
+    setConfirmModal({
+      isOpen: true,
+      taskId,
+      title: 'Delete Task',
+      message: 'Are you sure you want to delete this task? This action cannot be undone and will remove all associated bids.',
+      type: 'danger'
+    });
+  };
+
+  const executeDelete = async () => {
+    const { taskId } = confirmModal;
+    setConfirmModal({ ...confirmModal, isOpen: false });
 
     try {
       await api.delete(`/tasks/${taskId}`);
       fetchMyTasks();
+      setAlertModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Task Deleted',
+        message: 'The task has been permanently deleted.'
+      });
     } catch (error) {
       console.error('Error deleting task:', error);
-      alert('Failed to delete task');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Deletion Failed',
+        message: 'Failed to delete task. Please try again.'
+      });
     }
   };
 
@@ -219,6 +256,27 @@ export default function MyPosts() {
           ))}
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={executeDelete}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }
