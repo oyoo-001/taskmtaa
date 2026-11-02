@@ -62,6 +62,18 @@ async function migrate() {
       ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false;
     `);
 
+    // Add security-related columns for password management and account deletion
+    console.log('→ Adding security columns to users table...');
+    await client.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false,
+      ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP;
+    `);
+
     // Public seller profile fields used by the Gigs marketplace
     console.log('→ Adding seller profile columns to users table...');
     await client.query(`
@@ -377,6 +389,24 @@ async function migrate() {
     // Create indices for push_subscriptions
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
+    `);
+
+    // Create two_factor_backup_codes table
+    console.log('→ Creating two_factor_backup_codes table...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS two_factor_backup_codes (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        code_hash VARCHAR(255) NOT NULL,
+        used BOOLEAN DEFAULT false,
+        used_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_backup_codes_user ON two_factor_backup_codes(user_id);
+      CREATE INDEX IF NOT EXISTS idx_backup_codes_used ON two_factor_backup_codes(user_id, used);
     `);
     
     await client.query('COMMIT');

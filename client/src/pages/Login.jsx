@@ -6,6 +6,8 @@ import { logo } from '../lib/assets';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -22,11 +24,24 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(email, password);
-      // Redirect to the page they wanted to visit
-      navigate(from, { replace: true });
+      const result = await login(email, password, twoFactorCode);
+      
+      // Check if 2FA is required
+      if (result?.requiresTwoFactor) {
+        setRequiresTwoFactor(true);
+        setError('');
+      } else {
+        // Redirect to the page they wanted to visit
+        navigate(from, { replace: true });
+      }
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Login failed');
+      const errorMsg = err.response?.data?.error?.message || err.response?.data?.message || 'Login failed';
+      setError(errorMsg);
+      
+      // If account is locked, don't show 2FA input
+      if (errorMsg.includes('locked') || errorMsg.includes('suspended')) {
+        setRequiresTwoFactor(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -85,6 +100,7 @@ export default function Login() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
               />
             </div>
             <div>
@@ -100,7 +116,40 @@ export default function Login() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
               />
+            </div>
+
+            {requiresTwoFactor && (
+              <div>
+                <label htmlFor="twoFactorCode" className="block text-sm font-medium text-gray-700 mb-1">
+                  Two-Factor Code
+                </label>
+                <input
+                  id="twoFactorCode"
+                  name="twoFactorCode"
+                  type="text"
+                  maxLength={6}
+                  required={requiresTwoFactor}
+                  className="input text-center text-2xl tracking-widest"
+                  placeholder="000000"
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  disabled={loading}
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter the 6-digit code from your authenticator app or use a backup code
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <Link to="/forgot-password" className="font-medium text-primary-600 hover:text-primary-500">
+                Forgot your password?
+              </Link>
             </div>
           </div>
 

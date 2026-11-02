@@ -12,11 +12,14 @@ import {
   Clock,
   Pencil,
   X,
+  Shield,
 } from 'lucide-react';
 import { formatKenyanDate } from '../utils/dateUtils';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../lib/api';
 import VerifiedBadge from '../components/VerifiedBadge';
+import ChangePassword from '../components/ChangePassword';
+import TwoFactorAuth from '../components/TwoFactorAuth';
 
 export default function Profile() {
   const { user, setUser, updateProfile } = useAuth();
@@ -25,6 +28,7 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [showSecurity, setShowSecurity] = useState(false);
   const [form, setForm] = useState({
     full_name: '',
     phone_number: '',
@@ -494,11 +498,29 @@ export default function Profile() {
                 >
                   My Gigs
                 </Link>
-                <button className="px-6 py-2.5 bg-gray-100 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium">
-                  Change Password
+                <button className="px-6 py-2.5 bg-gray-100 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium" onClick={() => setShowSecurity(!showSecurity)}>
+                  <Shield className="w-4 h-4 inline-block mr-2" />
+                  {showSecurity ? 'Hide' : 'Show'} Security Settings
                 </button>
               </div>
             </div>
+
+            {/* Security Settings */}
+            {showSecurity && (
+              <div className="mt-8 space-y-6">
+                <div className="border-t border-gray-200 pt-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <Shield className="w-6 h-6 text-blue-600" />
+                    Security Settings
+                  </h2>
+                  
+                  <div className="space-y-6">
+                    <ChangePassword />
+                    <TwoFactorAuth />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

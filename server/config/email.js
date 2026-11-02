@@ -74,6 +74,101 @@ export async function sendEmailVerification(email, fullName, token) {
 }
 
 /**
+ * Send password reset email
+ * @param {string} email - Recipient email
+ * @param {string} fullName - User's full name
+ * @param {string} token - Reset token
+ */
+export async function sendPasswordResetEmail(email, fullName, token) {
+  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+  
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #2563eb;">Password Reset Request</h2>
+      <p>Hi ${fullName},</p>
+      <p>We received a request to reset your TaskMtaa password.</p>
+      <p style="margin: 30px 0;">
+        <a href="${resetUrl}" 
+           style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+          Reset Password
+        </a>
+      </p>
+      <p style="color: #666; font-size: 14px;">
+        Or copy and paste this link into your browser:<br>
+        <a href="${resetUrl}">${resetUrl}</a>
+      </p>
+      <p style="color: #666; font-size: 14px;">
+        This link will expire in 1 hour. If you didn't request a password reset, please ignore this email.
+      </p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+      <p style="color: #999; font-size: 12px;">
+        TaskMtaa Security Team
+      </p>
+    </div>
+  `;
+  
+  if (!isProduction) {
+    console.log('📧 [EMAIL - DEV MODE]');
+    console.log(`   To: ${email}`);
+    console.log(`   Subject: Reset your TaskMtaa password`);
+    console.log(`   Reset URL: ${resetUrl}`);
+    return { success: true, messageId: 'dev-mode-' + Date.now() };
+  }
+  
+  try {
+    const info = await transporter.sendMail({
+      from: `"TaskMtaa Security" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: 'Reset your TaskMtaa password',
+      html: html,
+    });
+    
+    console.log('📧 Password reset email sent successfully:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('📧 Password reset email failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send password changed notification
+ */
+export async function sendPasswordChangedEmail(email, fullName) {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #2563eb;">Password Changed</h2>
+      <p>Hi ${fullName},</p>
+      <p>Your TaskMtaa password was successfully changed.</p>
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        If you didn't make this change, please contact support immediately.
+      </p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+      <p style="color: #999; font-size: 12px;">TaskMtaa Security Team</p>
+    </div>
+  `;
+  
+  if (!isProduction) {
+    console.log('📧 [EMAIL - DEV MODE] Password changed notification sent to:', email);
+    return { success: true };
+  }
+  
+  try {
+    const info = await transporter.sendMail({
+      from: `"TaskMtaa Security" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: 'Your TaskMtaa password was changed',
+      html: html,
+    });
+    
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('📧 Password changed email failed:', error);
+    throw error;
+  }
+}
+
+/**
  * Send 2FA setup email
  */
 export async function send2FASetupEmail(email, fullName) {

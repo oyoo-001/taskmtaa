@@ -38,8 +38,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
+  const login = async (email, password, twoFactorCode = '') => {
+    const { data } = await api.post('/auth/login', { email, password, twoFactorCode });
+    
+    // If 2FA is required, return the response without setting tokens
+    if (data.data?.requiresTwoFactor) {
+      return data.data;
+    }
+    
     localStorage.setItem('access_token', data.data.accessToken);
     setUser(data.data.user);
     return data;

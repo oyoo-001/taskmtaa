@@ -31,7 +31,7 @@ export const authenticateToken = async (req, res, next) => {
     // Load the current account state so suspensions and admin rights
     // take effect immediately instead of waiting for the token to expire.
     const result = await query(
-      `SELECT id, email, is_admin, is_suspended, suspension_reason
+      `SELECT id, email, is_admin, is_suspended, suspension_reason, is_deleted
        FROM users
        WHERE id = $1`,
       [decoded.userId]
@@ -43,6 +43,12 @@ export const authenticateToken = async (req, res, next) => {
 
     const dbUser = result.rows[0];
 
+    // Block deleted accounts
+    if (dbUser.is_deleted) {
+      throw new ForbiddenException('Account not found');
+    }
+
+    // Block suspended accounts
     if (dbUser.is_suspended) {
       throw new ForbiddenException(
         dbUser.suspension_reason
