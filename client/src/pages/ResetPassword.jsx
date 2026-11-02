@@ -164,13 +164,16 @@ export default function ResetPassword() {
               />
             </div>
 
-            <button
+            <LoadingButton
               type="submit"
+              loading={loading}
+              loadingText="Resetting password..."
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full"
+              size="lg"
             >
-              {loading ? 'Resetting...' : 'Reset Password'}
-            </button>
+              Reset Password
+            </LoadingButton>
 
             <div className="text-center">
               <Link

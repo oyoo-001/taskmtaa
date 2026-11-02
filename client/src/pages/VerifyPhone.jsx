@@ -98,13 +98,16 @@ export default function VerifyPhone() {
               </p>
             </div>
 
-            <button
+            <LoadingButton
               type="submit"
+              loading={loading}
+              loadingText="Sending code..."
               disabled={loading}
-              className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="w-full"
+              size="lg"
             >
-              {loading ? 'Sending...' : 'Send Verification Code'}
-            </button>
+              Send Verification Code
+            </LoadingButton>
           </form>
         ) : (
           <form onSubmit={handleVerifyCode} className="bg-white p-8 rounded-lg shadow-md">
@@ -126,13 +129,16 @@ export default function VerifyPhone() {
               </p>
             </div>
 
-            <button
+            <LoadingButton
               type="submit"
+              loading={loading}
+              loadingText="Verifying..."
               disabled={loading || code.length !== 6}
-              className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors mb-3"
+              className="w-full mb-3"
+              size="lg"
             >
-              {loading ? 'Verifying...' : 'Verify Code'}
-            </button>
+              Verify Code
+            </LoadingButton>
 
             <button
               type="button"

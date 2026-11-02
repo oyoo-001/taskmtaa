@@ -125,13 +125,15 @@ export default function ChangePassword() {
           </label>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {loading ? 'Changing...' : 'Change Password'}
-        </button>
+              <LoadingButton
+                type="submit"
+                loading={loading}
+                loadingText="Changing password..."
+                disabled={loading}
+                className="w-full"
+              >
+                Change Password
+              </LoadingButton>
       </form>
     </div>
   );

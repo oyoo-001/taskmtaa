@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { logo } from '../lib/assets';
+import LoadingButton from '../components/LoadingButton';
 
 export default function Login() {
   const [email, setEmail] = useState('');
