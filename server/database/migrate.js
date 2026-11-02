@@ -93,6 +93,9 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_users_suspended ON users(is_suspended);
       CREATE INDEX IF NOT EXISTS idx_users_verified ON users(is_verified);
       CREATE INDEX IF NOT EXISTS idx_users_featured ON users(is_featured);
+      CREATE INDEX IF NOT EXISTS idx_users_deleted ON users(is_deleted) WHERE is_deleted = false;
+      CREATE INDEX IF NOT EXISTS idx_users_rating ON users(rating DESC);
+      CREATE INDEX IF NOT EXISTS idx_users_created ON users(created_at DESC);
     `);
 
     // Create admin audit log table
@@ -147,6 +150,8 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_tasks_status_created ON tasks(status, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_tasks_poster_status ON tasks(poster_id, status);
+      CREATE INDEX IF NOT EXISTS idx_tasks_budget ON tasks(budget);
+      CREATE INDEX IF NOT EXISTS idx_tasks_open_recent ON tasks(created_at DESC) WHERE status = 'open';
     `);
 
     // Create gigs table (Fiverr-style service listings)
@@ -178,6 +183,8 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_gigs_category ON gigs(category);
       CREATE INDEX IF NOT EXISTS idx_gigs_created ON gigs(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_gigs_status_created ON gigs(status, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_gigs_active_recent ON gigs(created_at DESC) WHERE status = 'active';
+      CREATE INDEX IF NOT EXISTS idx_gigs_amount ON gigs(amount);
     `);
 
     // Existing databases need the subcategory column added and old,

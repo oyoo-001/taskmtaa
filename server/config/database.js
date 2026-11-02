@@ -14,22 +14,26 @@ const connectionConfig = {
   connectionString: process.env.DATABASE_URL,
   
   // Pool sizing for high concurrency (adjust based on your database plan limits)
-  max: parseInt(process.env.DB_POOL_MAX) || 50,           // Maximum connections in pool
-  min: parseInt(process.env.DB_POOL_MIN) || 5,            // Minimum connections to keep alive
+  max: parseInt(process.env.DB_POOL_MAX) || 20,           // Maximum connections in pool (reduced from 50)
+  min: parseInt(process.env.DB_POOL_MIN) || 2,            // Minimum connections to keep alive
   
   // Timeout configurations (in milliseconds)
   idleTimeoutMillis: 30000,        // Close idle connections after 30s
-  connectionTimeoutMillis: 10000,  // Wait up to 10s for available connection
+  connectionTimeoutMillis: 5000,   // Wait up to 5s for available connection (reduced from 10s)
   
   // Query and statement timeouts
-  statement_timeout: 30000,        // Kill queries running longer than 30s
-  query_timeout: 30000,            // Client-side query timeout
+  statement_timeout: 10000,        // Kill queries running longer than 10s (reduced from 30s)
+  query_timeout: 10000,            // Client-side query timeout (reduced from 30s)
   
   // Connection management
   allowExitOnIdle: false,          // Keep pool alive even with no connections
   
   // Advanced settings for better performance
   application_name: 'TaskMtaa',    // Helps identify app in database logs
+  
+  // Performance optimizations
+  keepAlive: true,                 // Keep TCP connections alive
+  keepAliveInitialDelayMillis: 10000, // Start keepalive after 10s
 };
 
 // For cloud databases with SSL, configure SSL properly
@@ -89,27 +93,29 @@ export const query = async (text, params) => {
     const result = await pool.query(text, params);
     const duration = Date.now() - start;
     
-    // Only log slow queries in production (> 1 second)
-    if (process.env.NODE_ENV === 'development' || duration > 1000) {
-      console.log('Query executed:', { 
+    // Log slow queries (> 500ms)
+    if (duration > 500) {
+      console.warn('⚠️  SLOW QUERY:', { 
         duration: `${duration}ms`, 
         rows: result.rowCount,
-        slow: duration > 1000 ? '⚠️ SLOW' : ''
+        query: text.substring(0, 150) + '...'
       });
-      
-      // Log full query only in development
-      if (process.env.NODE_ENV === 'development' && duration < 500) {
-        console.log('SQL:', text.substring(0, 100) + '...');
-      }
+    }
+    // Log in development for all queries
+    else if (process.env.NODE_ENV === 'development') {
+      console.log('Query:', { 
+        duration: `${duration}ms`, 
+        rows: result.rowCount
+      });
     }
     
     return result;
   } catch (error) {
     const duration = Date.now() - start;
-    console.error('Query error:', { 
+    console.error('❌ Query error:', { 
       duration: `${duration}ms`,
       error: error.message,
-      query: text.substring(0, 100) + '...'
+      query: text.substring(0, 150) + '...'
     });
     throw error;
   }
