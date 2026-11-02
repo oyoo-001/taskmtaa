@@ -6,6 +6,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import ContactUs from './pages/ContactUs';
+import AboutUs from './pages/AboutUs';
+import TermsConditions from './pages/TermsConditions';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import Home from './pages/Home';
 import BrowseTasks from './pages/BrowseTasks';
 import Gigs from './pages/Gigs';
@@ -51,6 +55,10 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/contact" element={<ContactUs />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/terms" element={<TermsConditions />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/tasks/:id" element={<TaskDetail />} />
         <Route
           path="/tasks/create"

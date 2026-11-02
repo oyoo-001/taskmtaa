@@ -27,6 +27,7 @@ import geoRoutes from './routes/geoRoutes.js';
 import gigRoutes from './routes/gigRoutes.js';
 import gigOrderRoutes from './routes/gigOrderRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import contactRoutes from './routes/contactRoutes.js';
 import { isCloudinaryConfigured } from './config/cloudinary.js';
 
 // Load environment variables
@@ -174,6 +175,7 @@ app.use('/api/v1/geo', geoRoutes);
 app.use('/api/v1/gigs', gigRoutes);
 app.use('/api/v1/gig-orders', gigOrderRoutes);
 app.use('/api/v1/uploads', uploadRoutes);
+app.use('/api/v1/contact', contactRoutes);
 
 // Serve static files from React build in production
 if (process.env.NODE_ENV === 'production') {

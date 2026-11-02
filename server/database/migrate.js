@@ -391,6 +391,24 @@ async function migrate() {
       CREATE INDEX IF NOT EXISTS idx_push_user ON push_subscriptions(user_id);
     `);
 
+    // Create contact_submissions table
+    console.log('→ Creating contact_submissions table...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS contact_submissions (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        subject VARCHAR(500) NOT NULL,
+        message TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_contact_created ON contact_submissions(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_contact_email ON contact_submissions(email);
+    `);
+
     // Create two_factor_backup_codes table
     console.log('→ Creating two_factor_backup_codes table...');
     await client.query(`

@@ -11,6 +11,8 @@ export default function Register() {
     password: '',
     confirmPassword: '',
   });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -28,6 +30,16 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!acceptedTerms) {
+      setError('You must accept the Terms & Conditions to register');
+      return;
+    }
+
+    if (!acceptedPrivacy) {
+      setError('You must accept the Privacy Policy to register');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -167,13 +179,58 @@ export default function Register() {
                 onChange={handleChange}
               />
             </div>
+
+            {/* Terms and Privacy Checkboxes */}
+            <div className="space-y-3 pt-4">
+              <div className="flex items-start">
+                <input
+                  id="acceptTerms"
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="acceptTerms" className="ml-2 text-sm text-gray-700">
+                  I accept the{' '}
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    className="text-blue-600 hover:text-blue-700 underline font-medium"
+                  >
+                    Terms & Conditions
+                  </Link>
+                  {' '}*
+                </label>
+              </div>
+
+              <div className="flex items-start">
+                <input
+                  id="acceptPrivacy"
+                  type="checkbox"
+                  checked={acceptedPrivacy}
+                  onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                  className="w-4 h-4 mt-1 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="acceptPrivacy" className="ml-2 text-sm text-gray-700">
+                  I accept the{' '}
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    className="text-blue-600 hover:text-blue-700 underline font-medium"
+                  >
+                    Privacy Policy
+                  </Link>
+                  {' '}*
+                </label>
+              </div>
+            </div>
           </div>
 
           <div>
             <button
               type="submit"
-              disabled={loading}
-              className="w-full btn btn-primary"
+              disabled={loading || !acceptedTerms || !acceptedPrivacy}
+              className="w-full btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create account'}
             </button>
