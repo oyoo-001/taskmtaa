@@ -49,6 +49,10 @@ for (const envVar of requiredEnvVars) {
 const app = express();
 const httpServer = createServer(app);
 
+// Trust proxy - Render is behind a proxy
+// This allows rate limiting and IP detection to work correctly
+app.set('trust proxy', 1);
+
 // Initialize Socket.io with CORS
 const io = new Server(httpServer, {
   cors: {
