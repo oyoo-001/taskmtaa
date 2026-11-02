@@ -8,13 +8,21 @@ import {
   CheckCircleIcon, 
   XCircleIcon,
   ChatBubbleLeftIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  StarIcon
 } from '@heroicons/react/24/outline';
+import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 
 export default function BidsTracking() {
   const [bids, setBids] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, pending, accepted, rejected
+  const [filter, setFilter] = useState('all'); // all, pending, accepted, rejected, completed
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedBid, setSelectedBid] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchBids();
@@ -91,6 +99,52 @@ export default function BidsTracking() {
     pending: bids.filter(b => b.status === 'pending').length,
     accepted: bids.filter(b => b.status === 'accepted').length,
     rejected: bids.filter(b => b.status === 'rejected').length,
+    completed: bids.filter(b => b.status === 'completed').length,
+  };
+
+  const handleCompleteBid = async (bidId) => {
+    if (!confirm('Are you sure you want to mark this bid as completed? This will allow you to rate the tasker.')) {
+      return;
+    }
+
+    try {
+      await api.patch(`/bids/${bidId}/complete`);
+      fetchBids();
+      alert('Bid marked as completed! Please rate the tasker.');
+    } catch (error) {
+      console.error('Error completing bid:', error);
+      alert(error.response?.data?.error?.message || 'Failed to complete bid');
+    }
+  };
+
+  const openRatingModal = (bid) => {
+    setSelectedBid(bid);
+    setRating(0);
+    setComment('');
+    setShowRatingModal(true);
+  };
+
+  const handleSubmitRating = async () => {
+    if (rating === 0) {
+      alert('Please select a rating');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await api.post(`/bids/${selectedBid.id}/rate`, {
+        rating,
+        comment
+      });
+      setShowRatingModal(false);
+      fetchBids();
+      alert('Rating submitted successfully!');
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      alert(error.response?.data?.error?.message || 'Failed to submit rating');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -109,7 +163,7 @@ export default function BidsTracking() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         <div className="bg-white p-6 rounded-lg border border-gray-200">
           <div className="text-sm text-gray-600">Total Bids</div>
           <div className="text-3xl font-bold text-gray-900 mt-1">{stats.total}</div>
@@ -123,6 +177,10 @@ export default function BidsTracking() {
           <div className="text-3xl font-bold text-green-600 mt-1">{stats.accepted}</div>
         </div>
         <div className="bg-white p-6 rounded-lg border border-gray-200">
+          <div className="text-sm text-gray-600">Completed</div>
+          <div className="text-3xl font-bold text-blue-600 mt-1">{stats.completed}</div>
+        </div>
+        <div className="bg-white p-6 rounded-lg border border-gray-200">
           <div className="text-sm text-gray-600">Rejected</div>
           <div className="text-3xl font-bold text-red-600 mt-1">{stats.rejected}</div>
         </div>
@@ -130,7 +188,7 @@ export default function BidsTracking() {
 
       {/* Filters */}
       <div className="flex gap-2 mb-6">
-        {['all', 'pending', 'accepted', 'rejected'].map(status => (
+        {['all', 'pending', 'accepted', 'completed', 'rejected'].map(status => (
           <button
             key={status}
             onClick={() => setFilter(status)}
@@ -188,6 +246,7 @@ export default function BidsTracking() {
                     inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium mt-2
                     ${bid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
                     ${bid.status === 'accepted' ? 'bg-green-100 text-green-800' : ''}
+                    ${bid.status === 'completed' ? 'bg-blue-100 text-blue-800' : ''}
                     ${bid.status === 'rejected' ? 'bg-red-100 text-red-800' : ''}
                   `}>
                     {bid.status}
@@ -222,6 +281,26 @@ export default function BidsTracking() {
                     </button>
                   </>
                 )}
+                {bid.status === 'accepted' && (
+                  <button
+                    onClick={() => handleCompleteBid(bid.id)}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg
+                      hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    <CheckCircleIcon className="h-5 w-5 mr-2" />
+                    Mark as Completed
+                  </button>
+                )}
+                {bid.status === 'completed' && (
+                  <button
+                    onClick={() => openRatingModal(bid)}
+                    className="flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg
+                      hover:bg-yellow-700 transition-colors font-medium"
+                  >
+                    <StarIcon className="h-5 w-5 mr-2" />
+                    Rate Tasker
+                  </button>
+                )}
                 <Link
                   to={`/messages?user=${bid.tasker_id}&task=${bid.task.id}`}
                   className="flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 
@@ -233,6 +312,84 @@ export default function BidsTracking() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Rating Modal */}
+      {showRatingModal && selectedBid && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              Rate {selectedBid.tasker_name}
+            </h3>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                How was your experience?
+              </label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    className="focus:outline-none transition-transform hover:scale-110"
+                  >
+                    {star <= (hoverRating || rating) ? (
+                      <StarIconSolid className="h-10 w-10 text-yellow-400" />
+                    ) : (
+                      <StarIcon className="h-10 w-10 text-gray-300" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              {rating > 0 && (
+                <p className="text-sm text-gray-600 mt-2">
+                  {rating === 1 && 'Poor'}
+                  {rating === 2 && 'Fair'}
+                  {rating === 3 && 'Good'}
+                  {rating === 4 && 'Very Good'}
+                  {rating === 5 && 'Excellent'}
+                </p>
+              )}
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Additional Comments (Optional)
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Share your experience working with this tasker..."
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleSubmitRating}
+                disabled={submitting || rating === 0}
+                className="flex-1 bg-primary-600 text-white py-2 px-4 rounded-lg font-medium
+                  hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed
+                  transition-colors"
+              >
+                {submitting ? 'Submitting...' : 'Submit Rating'}
+              </button>
+              <button
+                onClick={() => setShowRatingModal(false)}
+                disabled={submitting}
+                className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700
+                  hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed
+                  transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

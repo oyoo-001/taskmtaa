@@ -304,3 +304,190 @@ export const getMyBids = async (req, res) => {
     }
   });
 };
+
+/**
+ * Mark bid as completed (buyer only, after tasker performed the work)
+ */
+export const completeBid = async (req, res) => {
+  const { id: bidId } = req.params;
+  const client = await getClient();
+
+  try {
+    await client.query('BEGIN');
+
+    // Get bid and task details
+    const bidResult = await client.query(
+      `SELECT b.id, b.task_id, b.tasker_id, b.status,
+              t.poster_id, t.status as task_status
+       FROM task_bids b
+       JOIN tasks t ON b.task_id = t.id
+       WHERE b.id = $1`,
+      [bidId]
+    );
+
+    if (bidResult.rows.length === 0) {
+      throw new NotFoundException('Bid not found');
+    }
+
+    const bid = bidResult.rows[0];
+
+    // Verify user is the task poster (buyer)
+    if (bid.poster_id !== req.user.id) {
+      throw new ForbiddenException('Only the task poster can mark bids as completed');
+    }
+
+    // Verify bid is accepted
+    if (bid.status !== 'accepted') {
+      throw new BadRequestException('Can only mark accepted bids as completed');
+    }
+
+    // Mark the bid as completed
+    await client.query(
+      `UPDATE task_bids
+       SET status = 'completed', completed_at = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [bidId]
+    );
+
+    // Update task status to completed
+    await client.query(
+      `UPDATE tasks
+       SET status = 'completed', updated_at = NOW()
+       WHERE id = $1`,
+      [bid.task_id]
+    );
+
+    // Increment tasker's completed tasks count
+    await client.query(
+      `UPDATE users
+       SET completed_tasks_count = completed_tasks_count + 1
+       WHERE id = $1`,
+      [bid.tasker_id]
+    );
+
+    await client.query('COMMIT');
+
+    // Get updated bid
+    const updatedBid = await query(
+      `SELECT 
+        b.id, b.task_id, b.bid_amount, b.status, b.completed_at,
+        u.id as tasker_id,
+        u.full_name as tasker_name
+      FROM task_bids b
+      JOIN users u ON b.tasker_id = u.id
+      WHERE b.id = $1`,
+      [bidId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        bid: updatedBid.rows[0]
+      },
+      message: 'Bid marked as completed successfully'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Rate a tasker after bid completion (buyer only)
+ */
+export const rateBid = async (req, res) => {
+  const { id: bidId } = req.params;
+  const { rating, comment } = req.body;
+
+  // Validate rating
+  if (!rating || rating < 1 || rating > 5) {
+    throw new BadRequestException('Rating must be between 1 and 5');
+  }
+
+  const client = await getClient();
+
+  try {
+    await client.query('BEGIN');
+
+    // Get bid and task details
+    const bidResult = await client.query(
+      `SELECT b.id, b.task_id, b.tasker_id, b.status,
+              t.poster_id
+       FROM task_bids b
+       JOIN tasks t ON b.task_id = t.id
+       WHERE b.id = $1`,
+      [bidId]
+    );
+
+    if (bidResult.rows.length === 0) {
+      throw new NotFoundException('Bid not found');
+    }
+
+    const bid = bidResult.rows[0];
+
+    // Verify user is the task poster (buyer)
+    if (bid.poster_id !== req.user.id) {
+      throw new ForbiddenException('Only the task poster can rate the tasker');
+    }
+
+    // Verify bid is completed
+    if (bid.status !== 'completed') {
+      throw new BadRequestException('Can only rate completed bids');
+    }
+
+    // Check if already rated
+    const existingReview = await client.query(
+      'SELECT id FROM task_reviews WHERE task_id = $1 AND reviewer_id = $2',
+      [bid.task_id, req.user.id]
+    );
+
+    if (existingReview.rows.length > 0) {
+      throw new BadRequestException('You have already rated this task');
+    }
+
+    // Create review
+    const reviewResult = await client.query(
+      `INSERT INTO task_reviews (task_id, reviewer_id, reviewee_id, rating, comment)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, rating, comment, created_at`,
+      [bid.task_id, req.user.id, bid.tasker_id, rating, comment]
+    );
+
+    // Update tasker's average rating
+    const avgResult = await client.query(
+      `SELECT AVG(rating)::numeric(3,2) as avg_rating
+       FROM task_reviews
+       WHERE reviewee_id = $1`,
+      [bid.tasker_id]
+    );
+
+    const newRating = avgResult.rows[0].avg_rating;
+
+    await client.query(
+      `UPDATE users
+       SET rating = $1
+       WHERE id = $2`,
+      [newRating, bid.tasker_id]
+    );
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      data: {
+        review: reviewResult.rows[0],
+        tasker_new_rating: parseFloat(newRating)
+      },
+      message: 'Rating submitted successfully'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};

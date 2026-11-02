@@ -274,11 +274,30 @@ async function migrate() {
         tasker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         bid_amount DECIMAL(10,2) NOT NULL CHECK (bid_amount > 0),
         pitch_note TEXT,
-        status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+        status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'completed')),
+        completed_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(task_id, tasker_id)
       );
+    `);
+
+    // Add completed status to existing bids table
+    console.log('→ Updating task_bids status constraint...');
+    await client.query(`
+      DO $$ 
+      BEGIN
+        ALTER TABLE task_bids DROP CONSTRAINT IF EXISTS task_bids_status_check;
+        ALTER TABLE task_bids ADD CONSTRAINT task_bids_status_check 
+          CHECK (status IN ('pending', 'accepted', 'rejected', 'completed'));
+      EXCEPTION
+        WHEN others THEN NULL;
+      END $$;
+    `);
+
+    await client.query(`
+      ALTER TABLE task_bids
+      ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
     `);
     
     // Create indices for task_bids

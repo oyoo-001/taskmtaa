@@ -7,7 +7,9 @@ import {
   getTaskBids,
   acceptBid,
   rejectBid,
-  getMyBids
+  getMyBids,
+  completeBid,
+  rateBid
 } from '../controllers/bidController.js';
 
 const router = express.Router();
@@ -44,6 +46,20 @@ router.patch('/:id/accept', authenticateToken, validate(schemas.idParam), asyncH
  * @access  Private (poster only)
  */
 router.patch('/:id/reject', authenticateToken, validate(schemas.idParam), asyncHandler(rejectBid));
+
+/**
+ * @route   PATCH /api/v1/bids/:id/complete
+ * @desc    Mark bid as completed
+ * @access  Private (poster only)
+ */
+router.patch('/:id/complete', authenticateToken, validate(schemas.idParam), asyncHandler(completeBid));
+
+/**
+ * @route   POST /api/v1/bids/:id/rate
+ * @desc    Rate a tasker after bid completion
+ * @access  Private (poster only)
+ */
+router.post('/:id/rate', authenticateToken, validate(schemas.idParam), asyncHandler(rateBid));
 
 /**
  * @route   GET /api/v1/bids/my-bids
