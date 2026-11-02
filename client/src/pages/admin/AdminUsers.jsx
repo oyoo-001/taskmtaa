@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { api } from '../../lib/api';
 import VerifiedBadge from '../../components/VerifiedBadge';
+import ConfirmModal from '../../components/ConfirmModal';
+import AlertModal from '../../components/AlertModal';
 
   const STATUS_OPTIONS = [
   { value: 'all', label: 'All users' },
@@ -39,6 +41,11 @@ export default function AdminUsers() {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, user: null });
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
+  const [suspendReason, setSuspendReason] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -108,51 +115,94 @@ export default function AdminUsers() {
 
   const handleSuspend = async (user) => {
     if (user.is_suspended) {
-      if (!window.confirm(`Reinstate ${user.full_name}?`)) return;
-      setBusyId(user.id);
-      try {
-        await api.patch(`/admin/users/${user.id}/suspend`, { suspend: false });
-        refresh();
-      } catch (err) {
-        setError(err.response?.data?.error?.message || 'Failed to reinstate user');
-      } finally {
-        setBusyId(null);
-      }
+      setConfirmModal({
+        isOpen: true,
+        action: 'reinstate',
+        user,
+        title: 'Reinstate User',
+        message: `Reinstate ${user.full_name}?`,
+        type: 'success'
+      });
       return;
     }
 
-    const reason = window.prompt(`Reason for suspending ${user.full_name}:`);
-    if (reason === null) return;
-    if (!reason.trim()) {
-      setError('A suspension reason is required');
-      return;
-    }
-
-    setBusyId(user.id);
-    try {
-      await api.patch(`/admin/users/${user.id}/suspend`, { suspend: true, reason: reason.trim() });
-      refresh();
-    } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to suspend user');
-    } finally {
-      setBusyId(null);
-    }
+    // Show suspend modal with reason input
+    setSuspendReason('');
+    setConfirmModal({
+      isOpen: true,
+      action: 'suspend',
+      user,
+      title: 'Suspend User',
+      message: `Reason for suspending ${user.full_name}:`,
+      type: 'warning'
+    });
   };
 
   const handleDelete = async (user) => {
-    const confirmed = window.confirm(
-      `Permanently delete ${user.full_name}? Their tasks, bids and messages will also be removed.`
-    );
-    if (!confirmed) return;
-
+    setConfirmModal({
+      isOpen: true,
+      action: 'delete',
+      user,
+      title: 'Delete User',
+      message: `Permanently delete ${user.full_name}? Their tasks, bids and messages will also be removed.`,
+      type: 'danger'
+    });
+  };
+  
+  const executeAction = async () => {
+    const { action, user } = confirmModal;
+    
+    // Validate suspend reason if suspending
+    if (action === 'suspend' && !suspendReason.trim()) {
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Reason Required',
+        message: 'A suspension reason is required'
+      });
+      return;
+    }
+    
+    setConfirmModal({ ...confirmModal, isOpen: false });
     setBusyId(user.id);
+    
     try {
-      await api.delete(`/admin/users/${user.id}`);
+      if (action === 'reinstate') {
+        await api.patch(`/admin/users/${user.id}/suspend`, { suspend: false });
+        setAlertModal({
+          isOpen: true,
+          type: 'success',
+          title: 'User Reinstated',
+          message: 'The user has been reinstated successfully.'
+        });
+      } else if (action === 'suspend') {
+        await api.patch(`/admin/users/${user.id}/suspend`, { suspend: true, reason: suspendReason.trim() });
+        setAlertModal({
+          isOpen: true,
+          type: 'success',
+          title: 'User Suspended',
+          message: 'The user has been suspended.'
+        });
+      } else if (action === 'delete') {
+        await api.delete(`/admin/users/${user.id}`);
+        setAlertModal({
+          isOpen: true,
+          type: 'success',
+          title: 'User Deleted',
+          message: 'The user has been deleted permanently.'
+        });
+      }
       refresh();
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to delete user');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Action Failed',
+        message: err.response?.data?.error?.message || `Failed to ${action} user`
+      });
     } finally {
       setBusyId(null);
+      setSuspendReason('');
     }
   };
 
@@ -526,6 +576,46 @@ export default function AdminUsers() {
           </div>
         </div>
       )}
+      
+      {/* Confirmation Modal with custom content for suspend */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => {
+          setConfirmModal({ ...confirmModal, isOpen: false });
+          setSuspendReason('');
+        }}
+        onConfirm={executeAction}
+        title={confirmModal.title}
+        message={
+          confirmModal.action === 'suspend' 
+            ? (
+                <div>
+                  <p className="mb-3">{confirmModal.message}</p>
+                  <textarea
+                    value={suspendReason}
+                    onChange={(e) => setSuspendReason(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Enter suspension reason..."
+                    autoFocus
+                  />
+                </div>
+              )
+            : confirmModal.message
+        }
+        type={confirmModal.type}
+        confirmText={confirmModal.action === 'delete' ? 'Delete' : 'Confirm'}
+        cancelText="Cancel"
+      />
+      
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

@@ -20,6 +20,7 @@ import api from '../lib/api';
 import VerifiedBadge from '../components/VerifiedBadge';
 import ChangePassword from '../components/ChangePassword';
 import TwoFactorAuth from '../components/TwoFactorAuth';
+import AlertModal from '../components/AlertModal';
 
 export default function Profile() {
   const { user, setUser, updateProfile } = useAuth();
@@ -29,6 +30,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [showSecurity, setShowSecurity] = useState(false);
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
   const [form, setForm] = useState({
     full_name: '',
     phone_number: '',
@@ -93,13 +95,23 @@ export default function Profile() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Invalid File',
+        message: 'Please upload an image file'
+      });
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image size should be less than 5MB');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'File Too Large',
+        message: 'Image size should be less than 5MB'
+      });
       return;
     }
 
@@ -124,10 +136,12 @@ export default function Profile() {
       setTimeout(() => setUploadSuccess(false), 3000);
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      alert(
-        error.response?.data?.error?.message ||
-          'Failed to upload image. Please try again.'
-      );
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Upload Failed',
+        message: error.response?.data?.error?.message || 'Failed to upload image. Please try again.'
+      });
     } finally {
       setUploading(false);
     }
@@ -524,6 +538,15 @@ export default function Profile() {
           </div>
         </div>
       </div>
+      
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

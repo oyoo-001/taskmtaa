@@ -23,6 +23,8 @@ import api from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useSocket } from '../contexts/SocketContext';
 import VerifiedBadge from '../components/VerifiedBadge';
+import ConfirmModal from '../components/ConfirmModal';
+import AlertModal from '../components/AlertModal';
 
 export default function TaskDetail() {
   const { id } = useParams();
@@ -34,6 +36,10 @@ export default function TaskDetail() {
   const [pitchNote, setPitchNote] = useState('');
   const [showBidModal, setShowBidModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, bidId: null });
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   // Fetch task details
   const { data, isLoading, error } = useQuery({
@@ -76,7 +82,21 @@ export default function TaskDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['task', id]);
+      setAlertModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Bid Accepted',
+        message: 'The bid has been accepted successfully!'
+      });
     },
+    onError: (error) => {
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Action Failed',
+        message: error.response?.data?.error?.message || 'Failed to accept bid. Please try again.'
+      });
+    }
   });
 
   // Delete task mutation
@@ -87,6 +107,14 @@ export default function TaskDetail() {
     onSuccess: () => {
       navigate('/my-tasks');
     },
+    onError: (error) => {
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Delete Failed',
+        message: error.response?.data?.error?.message || 'Failed to delete task. Please try again.'
+      });
+    }
   });
 
   // Update task status mutation
@@ -97,7 +125,21 @@ export default function TaskDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['task', id]);
+      setAlertModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Task Updated',
+        message: 'Task status has been updated successfully.'
+      });
     },
+    onError: (error) => {
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Update Failed',
+        message: error.response?.data?.error?.message || 'Failed to update task. Please try again.'
+      });
+    }
   });
 
   const handlePlaceBid = (e) => {
@@ -106,18 +148,46 @@ export default function TaskDetail() {
   };
 
   const handleAcceptBid = (bidId) => {
-    if (confirm('Are you sure you want to accept this bid?')) {
-      acceptBidMutation.mutate(bidId);
-    }
+    setConfirmModal({
+      isOpen: true,
+      action: 'accept',
+      bidId,
+      title: 'Accept Bid',
+      message: 'Are you sure you want to accept this bid?',
+      type: 'success'
+    });
   };
 
   const handleDeleteTask = () => {
-    deleteTaskMutation.mutate();
-    setShowDeleteConfirm(false);
+    setConfirmModal({
+      isOpen: true,
+      action: 'delete',
+      title: 'Delete Task',
+      message: 'Are you sure you want to delete this task? This action cannot be undone and all associated bids will be removed.',
+      type: 'danger'
+    });
   };
 
   const handleCancelTask = () => {
-    if (confirm('Are you sure you want to cancel this task?')) {
+    setConfirmModal({
+      isOpen: true,
+      action: 'cancel',
+      title: 'Cancel Task',
+      message: 'Are you sure you want to cancel this task?',
+      type: 'warning'
+    });
+  };
+  
+  const executeAction = () => {
+    const { action, bidId } = confirmModal;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    
+    if (action === 'accept') {
+      acceptBidMutation.mutate(bidId);
+    } else if (action === 'delete') {
+      deleteTaskMutation.mutate();
+      setShowDeleteConfirm(false);
+    } else if (action === 'cancel') {
       updateStatusMutation.mutate('cancelled');
     }
   };
@@ -178,7 +248,7 @@ export default function TaskDetail() {
                 <span>Hide Task</span>
               </button>
               <button
-                onClick={() => setShowDeleteConfirm(true)}
+                onClick={handleDeleteTask}
                 className="btn bg-red-50 text-red-600 hover:bg-red-100 text-sm flex items-center space-x-1"
               >
                 <Trash2 size={16} />
@@ -488,32 +558,26 @@ export default function TaskDetail() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-4 text-red-600">Delete Task?</h2>
-            <p className="text-gray-700 mb-6">
-              Are you sure you want to delete this task? This action cannot be undone and all associated bids will be removed.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="btn btn-secondary flex-1"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteTask}
-                disabled={deleteTaskMutation.isPending}
-                className="btn bg-red-600 text-white hover:bg-red-700 flex-1"
-              >
-                {deleteTaskMutation.isPending ? 'Deleting...' : 'Delete Task'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Confirmation Modal - now using ConfirmModal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={executeAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.action === 'delete' ? 'Delete Task' : 'Confirm'}
+        cancelText="Cancel"
+      />
+
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { Search, Trash2, MessageSquare, Star, ArrowRight } from 'lucide-react';
 import { api } from '../../lib/api';
 import VerifiedBadge from '../../components/VerifiedBadge';
+import ConfirmModal from '../../components/ConfirmModal';
+import AlertModal from '../../components/AlertModal';
 
 function Stars({ value }) {
   return (
@@ -29,6 +31,10 @@ export default function AdminFeedback() {
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, action: null, item: null });
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   useEffect(() => {
     let active = true;
@@ -68,26 +74,58 @@ export default function AdminFeedback() {
   };
 
   const deleteReview = async (review) => {
-    if (!window.confirm('Delete this review? This cannot be undone.')) return;
-    setBusyId(review.id);
-    try {
-      await api.delete(`/admin/feedback/reviews/${review.id}`);
-      setRefreshKey((key) => key + 1);
-    } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to delete review');
-    } finally {
-      setBusyId(null);
-    }
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteReview',
+      item: review,
+      title: 'Delete Review',
+      message: 'Delete this review? This cannot be undone.',
+      type: 'danger'
+    });
   };
 
   const deleteMessage = async (message) => {
-    if (!window.confirm('Delete this message? This cannot be undone.')) return;
-    setBusyId(message.id);
+    setConfirmModal({
+      isOpen: true,
+      action: 'deleteMessage',
+      item: message,
+      title: 'Delete Message',
+      message: 'Delete this message? This cannot be undone.',
+      type: 'danger'
+    });
+  };
+  
+  const executeAction = async () => {
+    const { action, item } = confirmModal;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    
+    setBusyId(item.id);
     try {
-      await api.delete(`/admin/feedback/messages/${message.id}`);
+      if (action === 'deleteReview') {
+        await api.delete(`/admin/feedback/reviews/${item.id}`);
+        setAlertModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Review Deleted',
+          message: 'The review has been deleted successfully.'
+        });
+      } else if (action === 'deleteMessage') {
+        await api.delete(`/admin/feedback/messages/${item.id}`);
+        setAlertModal({
+          isOpen: true,
+          type: 'success',
+          title: 'Message Deleted',
+          message: 'The message has been deleted successfully.'
+        });
+      }
       setRefreshKey((key) => key + 1);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to delete message');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Action Failed',
+        message: err.response?.data?.error?.message || `Failed to ${action}. Please try again.`
+      });
     } finally {
       setBusyId(null);
     }
@@ -279,6 +317,27 @@ export default function AdminFeedback() {
           </button>
         </div>
       </div>
+      
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={executeAction}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+      
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

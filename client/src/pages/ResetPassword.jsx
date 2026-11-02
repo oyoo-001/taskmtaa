@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../lib/api';
 import { logo } from '../lib/assets';
+import AlertModal from '../components/AlertModal';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -13,6 +14,7 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,9 +43,18 @@ export default function ResetPassword() {
         newPassword
       });
 
-      // Show success and redirect to login
-      alert('Password reset successfully! You can now login with your new password.');
-      navigate('/login');
+      // Show success modal and redirect after closing
+      setAlertModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Password Reset Successful',
+        message: 'Password reset successfully! You can now login with your new password.'
+      });
+      
+      // Navigate after a short delay
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to reset password. The link may have expired.');
     } finally {
@@ -172,6 +183,20 @@ export default function ResetPassword() {
           </form>
         </div>
       </div>
+      
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => {
+          setAlertModal({ ...alertModal, isOpen: false });
+          if (alertModal.type === 'success') {
+            navigate('/login');
+          }
+        }}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

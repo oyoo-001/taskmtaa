@@ -4,6 +4,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { Search, Trash2, ExternalLink, Filter } from 'lucide-react';
 import { api } from '../../lib/api';
 import VerifiedBadge from '../../components/VerifiedBadge';
+import ConfirmModal from '../../components/ConfirmModal';
+import AlertModal from '../../components/AlertModal';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All Status' },
@@ -19,6 +21,10 @@ export default function AdminGigs() {
   const [status, setStatus] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [deleting, setDeleting] = useState(null);
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, gigId: null, gigTitle: '' });
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   useEffect(() => {
     loadGigs();
@@ -46,17 +52,38 @@ export default function AdminGigs() {
   };
 
   const handleDelete = async (gigId, gigTitle) => {
-    if (!window.confirm(`Are you sure you want to delete the gig "${gigTitle}"? This cannot be undone.`)) {
-      return;
-    }
-
+    setConfirmModal({
+      isOpen: true,
+      gigId,
+      gigTitle,
+      title: 'Delete Gig',
+      message: `Are you sure you want to delete the gig "${gigTitle}"? This cannot be undone.`,
+      type: 'danger'
+    });
+  };
+  
+  const executeDelete = async () => {
+    const { gigId } = confirmModal;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    
     try {
       setDeleting(gigId);
       await api.delete(`/admin/gigs/${gigId}`);
       setGigs(gigs.filter(g => g.id !== gigId));
+      setAlertModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Gig Deleted',
+        message: 'The gig has been deleted successfully.'
+      });
     } catch (err) {
       console.error('Failed to delete gig:', err);
-      alert('Failed to delete gig. Please try again.');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Delete Failed',
+        message: 'Failed to delete gig. Please try again.'
+      });
     } finally {
       setDeleting(null);
     }
@@ -256,6 +283,27 @@ export default function AdminGigs() {
           </div>
         </div>
       )}
+      
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={executeDelete}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+      
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

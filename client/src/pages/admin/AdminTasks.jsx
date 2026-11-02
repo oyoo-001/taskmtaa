@@ -4,6 +4,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { Search, Trash2, MapPin, Briefcase, Star } from 'lucide-react';
 import { api } from '../../lib/api';
 import VerifiedBadge from '../../components/VerifiedBadge';
+import ConfirmModal from '../../components/ConfirmModal';
+import AlertModal from '../../components/AlertModal';
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All statuses' },
@@ -46,6 +48,10 @@ export default function AdminTasks() {
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, task: null });
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   useEffect(() => {
     let active = true;
@@ -79,14 +85,36 @@ export default function AdminTasks() {
   }, [search, status, category, page, refreshKey]);
 
   const handleDelete = async (task) => {
-    if (!window.confirm(`Delete "${task.title}"? This cannot be undone.`)) return;
+    setConfirmModal({
+      isOpen: true,
+      task,
+      title: 'Delete Job',
+      message: `Delete "${task.title}"? This cannot be undone.`,
+      type: 'danger'
+    });
+  };
+  
+  const executeDelete = async () => {
+    const { task } = confirmModal;
+    setConfirmModal({ ...confirmModal, isOpen: false });
 
     setBusyId(task.id);
     try {
       await api.delete(`/admin/tasks/${task.id}`);
       setRefreshKey((key) => key + 1);
+      setAlertModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Job Deleted',
+        message: 'The job has been deleted successfully.'
+      });
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to delete job');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Delete Failed',
+        message: err.response?.data?.error?.message || 'Failed to delete job'
+      });
     } finally {
       setBusyId(null);
     }
@@ -248,6 +276,27 @@ export default function AdminTasks() {
           </button>
         </div>
       </div>
+      
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={executeDelete}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+      
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

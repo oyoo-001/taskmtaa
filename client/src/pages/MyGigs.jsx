@@ -16,6 +16,9 @@ import {
 import api from '../lib/api';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { formatRelativeTime } from '../utils/dateUtils';
+import ConfirmModal from '../components/ConfirmModal';
+import AlertModal from '../components/AlertModal';
+import { useState } from 'react';
 
 const ORDER_STATUS_STYLES = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -27,6 +30,10 @@ const ORDER_STATUS_STYLES = {
 
 export default function MyGigs() {
   const queryClient = useQueryClient();
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, gig: null });
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   const refreshAll = () => {
     queryClient.invalidateQueries({ queryKey: ['my-gigs'] });
@@ -63,7 +70,23 @@ export default function MyGigs() {
       const { data } = await api.delete(`/gigs/${id}`);
       return data.data;
     },
-    onSuccess: refreshAll,
+    onSuccess: () => {
+      refreshAll();
+      setAlertModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Gig Deleted',
+        message: 'Your gig has been deleted successfully.'
+      });
+    },
+    onError: (error) => {
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Delete Failed',
+        message: error.response?.data?.error?.message || 'Failed to delete gig. Please try again.'
+      });
+    }
   });
 
   const orderStatusMutation = useMutation({
@@ -79,9 +102,19 @@ export default function MyGigs() {
   const pendingOrders = orders.filter((order) => order.status === 'pending');
 
   const handleDelete = (gig) => {
-    if (window.confirm(`Delete "${gig.title}"? This also removes its requests.`)) {
-      deleteMutation.mutate(gig.id);
-    }
+    setConfirmModal({
+      isOpen: true,
+      gig,
+      title: 'Delete Gig',
+      message: `Delete "${gig.title}"? This also removes its requests.`,
+      type: 'danger'
+    });
+  };
+  
+  const executeDelete = () => {
+    const { gig } = confirmModal;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    deleteMutation.mutate(gig.id);
   };
 
   return (
@@ -384,6 +417,27 @@ export default function MyGigs() {
           )}
         </section>
       </div>
+      
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={executeDelete}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+      
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

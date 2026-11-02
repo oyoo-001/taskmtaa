@@ -4,6 +4,9 @@ import { ArrowRight, ClipboardList, XCircle } from 'lucide-react';
 import api from '../lib/api';
 import VerifiedBadge from '../components/VerifiedBadge';
 import { formatRelativeTime } from '../utils/dateUtils';
+import ConfirmModal from '../components/ConfirmModal';
+import AlertModal from '../components/AlertModal';
+import { useState } from 'react';
 
 const STATUS_STYLES = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -15,6 +18,10 @@ const STATUS_STYLES = {
 
 export default function MyGigOrders() {
   const queryClient = useQueryClient();
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null });
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['gig-orders'],
@@ -29,10 +36,42 @@ export default function MyGigOrders() {
       const { data } = await api.patch(`/gig-orders/${id}/status`, { status: 'cancelled' });
       return data.data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['gig-orders'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['gig-orders'] });
+      setAlertModal({
+        isOpen: true,
+        type: 'success',
+        title: 'Request Cancelled',
+        message: 'Your gig request has been cancelled.'
+      });
+    },
+    onError: (error) => {
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Cancellation Failed',
+        message: error.response?.data?.error?.message || 'Failed to cancel request. Please try again.'
+      });
+    }
   });
 
   const orders = data?.orders || [];
+  
+  const handleCancelClick = (orderId) => {
+    setConfirmModal({
+      isOpen: true,
+      orderId,
+      title: 'Cancel Gig Request',
+      message: 'Cancel this gig request?',
+      type: 'warning'
+    });
+  };
+  
+  const executeCancel = () => {
+    const { orderId } = confirmModal;
+    setConfirmModal({ ...confirmModal, isOpen: false });
+    cancelMutation.mutate(orderId);
+  };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gray-50 py-6 sm:py-8">
@@ -150,11 +189,7 @@ export default function MyGigOrders() {
                   <div className="mt-3 border-t border-gray-100 pt-3">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (window.confirm('Cancel this gig request?')) {
-                          cancelMutation.mutate(order.id);
-                        }
-                      }}
+                      onClick={() => handleCancelClick(order.id)}
                       disabled={cancelMutation.isPending}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
                     >
@@ -168,6 +203,27 @@ export default function MyGigOrders() {
           </div>
         )}
       </div>
+      
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={executeCancel}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Cancel Request"
+        cancelText="Keep Request"
+      />
+      
+      {/* Alert Modal */}
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
+import AlertModal from './AlertModal';
 
 export default function TwoFactorAuth() {
   const [status, setStatus] = useState({ enabled: false, unusedBackupCodes: 0 });
@@ -17,6 +18,9 @@ export default function TwoFactorAuth() {
   // Disable state
   const [password, setPassword] = useState('');
   const [showDisableConfirm, setShowDisableConfirm] = useState(false);
+  
+  // Modal state
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
   useEffect(() => {
     fetchStatus();
@@ -102,12 +106,18 @@ export default function TwoFactorAuth() {
 
   const copyBackupCodes = () => {
     navigator.clipboard.writeText(backupCodes.join('\n'));
-    alert('Backup codes copied to clipboard!');
+    setAlertModal({
+      isOpen: true,
+      type: 'success',
+      title: 'Copied!',
+      message: 'Backup codes copied to clipboard!'
+    });
   };
 
   if (setupStep === 'qr') {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <>
+        <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Setup Two-Factor Authentication</h2>
 
         {error && (
@@ -180,12 +190,22 @@ export default function TwoFactorAuth() {
           </form>
         </div>
       </div>
+      
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
+      </>
     );
   }
 
   if (setupStep === 'verify' && backupCodes.length > 0) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <>
+        <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Save Your Backup Codes</h2>
 
         {success && (
@@ -229,11 +249,21 @@ export default function TwoFactorAuth() {
           </button>
         </div>
       </div>
+      
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        title={alertModal.title}
+        message={alertModal.message}
+        type={alertModal.type}
+      />
+      </>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <>
+      <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Two-Factor Authentication</h2>
 
       {error && (
@@ -353,5 +383,14 @@ export default function TwoFactorAuth() {
         )}
       </div>
     </div>
+    
+    <AlertModal
+      isOpen={alertModal.isOpen}
+      onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+      title={alertModal.title}
+      message={alertModal.message}
+      type={alertModal.type}
+    />
+    </>
   );
 }
