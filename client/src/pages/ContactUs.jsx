@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import api from '../lib/api';
+import LoadingButton from '../components/LoadingButton';
 
 export default function ContactUs() {
   const [formData, setFormData] = useState({

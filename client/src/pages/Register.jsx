@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { logo } from '../lib/assets';
+import LoadingButton from '../components/LoadingButton';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -227,13 +228,15 @@ export default function Register() {
           </div>
 
           <div>
-            <button
+            <LoadingButton
               type="submit"
+              loading={loading}
+              loadingText="Creating account..."
               disabled={loading || !acceptedTerms || !acceptedPrivacy}
-              className="w-full btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full"
             >
-              {loading ? 'Creating account...' : 'Create account'}
-            </button>
+              Create account
+            </LoadingButton>
           </div>
         </form>
       </div>
