@@ -4,11 +4,13 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme';
 
-// Placeholder screens (to be created)
-import TasksScreen from '../screens/tasks/TasksScreen';
-import GigsScreen from '../screens/gigs/GigsScreen';
-import MessagesScreen from '../screens/messages/MessagesScreen';
-import ProfileScreen from '../screens/profile/ProfileScreen';
+// Import screens
+import TaskListScreen from '../screens/TaskListScreen';
+import TaskDetailScreen from '../screens/TaskDetailScreen';
+import GigListScreen from '../screens/GigListScreen';
+import MessagesScreen from '../screens/MessagesScreen';
+import ChatScreen from '../screens/ChatScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -17,8 +19,13 @@ const TasksStack = () => (
   <Stack.Navigator>
     <Stack.Screen 
       name="TasksList" 
-      component={TasksScreen}
+      component={TaskListScreen}
       options={{ title: 'Browse Tasks' }}
+    />
+    <Stack.Screen 
+      name="TaskDetail" 
+      component={TaskDetailScreen}
+      options={{ title: 'Task Details' }}
     />
   </Stack.Navigator>
 );
@@ -27,7 +34,7 @@ const GigsStack = () => (
   <Stack.Navigator>
     <Stack.Screen 
       name="GigsList" 
-      component={GigsScreen}
+      component={GigListScreen}
       options={{ title: 'Browse Gigs' }}
     />
   </Stack.Navigator>
@@ -39,6 +46,11 @@ const MessagesStack = () => (
       name="MessagesList" 
       component={MessagesScreen}
       options={{ title: 'Messages' }}
+    />
+    <Stack.Screen 
+      name="Chat" 
+      component={ChatScreen}
+      options={({ route }) => ({ title: route.params?.userName || 'Chat' })}
     />
   </Stack.Navigator>
 );
