@@ -9,24 +9,29 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#3B82F6"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.taskmtaa.app"
+      "bundleIdentifier": "com.taskmtaa.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "TaskMtaa needs your location to find nearby tasks and gigs.",
+        "NSCameraUsageDescription": "TaskMtaa needs access to your camera to take photos for tasks and gigs.",
+        "NSPhotoLibraryUsageDescription": "TaskMtaa needs access to your photo library to select images."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#3B82F6"
       },
       "package": "com.taskmtaa.app",
       "permissions": [
-        "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE"
@@ -40,9 +45,21 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app needs access to your photos to upload task images."
+          "photosPermission": "TaskMtaa needs access to your photos to upload task images.",
+          "cameraPermission": "TaskMtaa needs access to your camera to take photos."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#3B82F6"
         }
       ]
-    ]
+    ],
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#3B82F6"
+    }
   }
 }

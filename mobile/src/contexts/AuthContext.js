@@ -1,6 +1,11 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../config/api';
+import {
+  registerForPushNotificationsAsync,
+  savePushTokenToServer,
+  removePushTokenFromServer,
+} from '../services/pushNotifications';
 
 const AuthContext = createContext({});
 
@@ -53,6 +58,17 @@ export const AuthProvider = ({ children }) => {
       setUser(data.data.user);
       setIsAuthenticated(true);
 
+      // Register for push notifications
+      try {
+        const pushToken = await registerForPushNotificationsAsync();
+        if (pushToken) {
+          await savePushTokenToServer(pushToken);
+          await AsyncStorage.setItem('push_token', pushToken);
+        }
+      } catch (error) {
+        console.error('Error registering push notifications:', error);
+      }
+
       return { success: true, user: data.data.user };
     } catch (error) {
       throw error;
@@ -81,12 +97,18 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
+      // Remove push token from server
+      const pushToken = await AsyncStorage.getItem('push_token');
+      if (pushToken) {
+        await removePushTokenFromServer(pushToken);
+      }
+
       await api.post('/auth/logout');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       // Clear local data
-      await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user']);
+      await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user', 'push_token']);
       setUser(null);
       setIsAuthenticated(false);
     }

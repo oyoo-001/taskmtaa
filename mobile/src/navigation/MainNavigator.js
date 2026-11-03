@@ -7,7 +7,10 @@ import { colors } from '../theme';
 // Import screens
 import TaskListScreen from '../screens/TaskListScreen';
 import TaskDetailScreen from '../screens/TaskDetailScreen';
+import CreateTaskScreen from '../screens/CreateTaskScreen';
+import PlaceBidScreen from '../screens/PlaceBidScreen';
 import GigListScreen from '../screens/GigListScreen';
+import CreateGigScreen from '../screens/CreateGigScreen';
 import MessagesScreen from '../screens/MessagesScreen';
 import ChatScreen from '../screens/ChatScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -27,6 +30,16 @@ const TasksStack = () => (
       component={TaskDetailScreen}
       options={{ title: 'Task Details' }}
     />
+    <Stack.Screen 
+      name="CreateTask" 
+      component={CreateTaskScreen}
+      options={{ title: 'Create Task' }}
+    />
+    <Stack.Screen 
+      name="PlaceBid" 
+      component={PlaceBidScreen}
+      options={{ title: 'Place Your Bid' }}
+    />
   </Stack.Navigator>
 );
 
@@ -36,6 +49,11 @@ const GigsStack = () => (
       name="GigsList" 
       component={GigListScreen}
       options={{ title: 'Browse Gigs' }}
+    />
+    <Stack.Screen 
+      name="CreateGig" 
+      component={CreateGigScreen}
+      options={{ title: 'Create Gig' }}
     />
   </Stack.Navigator>
 );
